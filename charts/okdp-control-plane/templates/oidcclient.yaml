@@ -1,0 +1,42 @@
+{{- if .Values.oidcClient.enabled }}
+{{- $url := include "okdp-control-plane.consoleUrl" . }}
+apiVersion: kubauth.kubotal.io/v1alpha1
+kind: OidcClient
+metadata:
+  name: {{ .Values.oidcClient.name }}
+  namespace: {{ include "okdp-control-plane.oidcClientNamespace" . }}
+  labels:
+    {{- include "okdp-control-plane.labels" . | nindent 4 }}
+    {{- with .Values.oidcClient.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.oidcClient.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  displayName: {{ .Values.oidcClient.displayName | quote }}
+  description: {{ .Values.oidcClient.description | quote }}
+  # The console is a browser SPA (authorization code flow with PKCE): no client secret.
+  public: true
+  entryURL: {{ $url | quote }}
+  accessTokenLifespan: {{ .Values.oidcClient.accessTokenLifespan }}
+  idTokenLifespan: {{ .Values.oidcClient.idTokenLifespan }}
+  refreshTokenLifespan: {{ .Values.oidcClient.refreshTokenLifespan }}
+  redirectURIs:
+    - {{ $url | quote }}
+    - {{ printf "%s/" $url | quote }}
+    - {{ printf "%s/silent-refresh.html" $url | quote }}
+    {{- range .Values.oidcClient.extraRedirectURIs }}
+    - {{ . | quote }}
+    {{- end }}
+  postLogoutURL: {{ $url | quote }}
+  grantTypes:
+    - authorization_code
+    - refresh_token
+  responseTypes:
+    - code
+  scopes:
+    {{- toYaml .Values.oidcClient.scopes | nindent 4 }}
+  forceOpenIdScope: true
+{{- end }}

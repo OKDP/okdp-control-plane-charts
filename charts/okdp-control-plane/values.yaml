@@ -1,0 +1,112 @@
+# Default values for okdp-control-plane.
+#
+# The chart is an umbrella over the two published control-plane charts:
+#   - okdp-server (oci://quay.io/okdp/charts/okdp-server): API server + RBAC
+#   - okdp-ui     (oci://quay.io/okdp/charts/okdp-ui):     web console + ingress
+# Every key under `okdp-server:` / `okdp-ui:` is passed verbatim to the
+# corresponding sub-chart. Only the most common settings are listed here; any
+# value supported by the sub-charts can be set under these keys.
+
+# -- Values passed to the okdp-server sub-chart.
+okdp-server:
+  # -- Deploy the API server.
+  enabled: true
+  image:
+    repository: quay.io/okdp/images/okdp-server
+    # -- Image tag. Empty means the sub-chart appVersion.
+    tag: ""
+    pullPolicy: IfNotPresent
+  # Rendered as environment variables of the server.
+  configuration:
+    # -- Namespace hosting the platform components (kubauth, OIDC clients).
+    platformNamespace: okdp-system
+    # -- Namespace of the KuboCD controller.
+    kubocdNamespace: kubocd-system
+    # -- KuboCD Context holding the service catalog.
+    contextName: default
+    contextNamespace: kubocd-system
+    # -- Single origin allowed by CORS. Kept for direct API access; the console
+    # itself is same-origin (the ingress routes /api to the server).
+    allowedOrigins: https://console.okdp.dev-sandbox
+    logLevel: info
+    releaseInterval: 30m
+    releaseTimeout: 10m
+  service:
+    type: ClusterIP
+    port: 8093
+  resources: {}
+
+# -- Values passed to the okdp-ui sub-chart.
+okdp-ui:
+  # -- Deploy the web console.
+  enabled: true
+  image:
+    repository: quay.io/okdp/images/okdp-ui
+    # -- Image tag. Empty means the sub-chart appVersion.
+    tag: ""
+    pullPolicy: IfNotPresent
+  # In-cluster okdp-server Service the console ingress routes /api to.
+  backend:
+    # -- Name of the Service the console proxies /api to. The umbrella chart
+    # renders a Service with this name in front of the API server pods, so it
+    # does not depend on the release name.
+    service: okdp-server
+    # -- Namespace of that Service. Empty means the release namespace.
+    namespace: ""
+    # -- Port of that Service.
+    port: 8093
+  service:
+    type: ClusterIP
+    port: 4200
+  # Public exposure of the console.
+  ingress:
+    className: nginx
+    # -- Public host of the console.
+    host: console.okdp.dev-sandbox
+    # -- cert-manager ClusterIssuer used for the TLS certificate.
+    clusterIssuer: default-issuer
+    tlsSecretName: okdp-ui-tls
+  # The console OIDC client is owned by this chart (see `oidcClient` below),
+  # keep the sub-chart one disabled to avoid two resources with the same name.
+  oidc:
+    enabled: false
+  resources: {}
+
+# Kubauth OIDC client for the console. The console authenticates with the
+# platform OIDC provider (kubauth) using the public client id `okdp-app`
+# built into the UI bundle; this resource registers the console public URL
+# as an allowed redirect URI. Requires the kubauth CRDs
+# (oidcclients.kubauth.kubotal.io) on the cluster.
+oidcClient:
+  # -- Create the kubauth OidcClient for the console.
+  enabled: true
+  # -- Name of the OidcClient resource. Kubauth uses it as client_id, which
+  # must match the client id built into the console (`okdp-app`).
+  name: okdp-app
+  # -- Namespace of the OidcClient (kubauth clients namespace). Defaults to
+  # okdp-server.configuration.platformNamespace.
+  namespace: ""
+  # -- Public URL of the console. Defaults to `https://<okdp-ui.ingress.host>`.
+  publicUrl: ""
+  displayName: OKDP Console
+  description: OIDC client for the OKDP web console
+  # -- Additional allowed redirect URIs (e.g. http://localhost:4200 for local
+  # development of the console against this cluster).
+  extraRedirectURIs: []
+  accessTokenLifespan: 1h0m0s
+  idTokenLifespan: 1h0m0s
+  refreshTokenLifespan: 1h0m0s
+  scopes:
+    - openid
+    - profile
+    - email
+    - groups
+    - offline_access
+  # -- Extra labels added to the OidcClient.
+  labels: {}
+  # -- Extra annotations added to the OidcClient.
+  annotations: {}
+
+tests:
+  # -- Image used by the `helm test` connection check.
+  image: busybox:1.37

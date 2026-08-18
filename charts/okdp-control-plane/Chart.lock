@@ -1,0 +1,9 @@
+dependencies:
+- name: okdp-server
+  repository: oci://quay.io/okdp/charts
+  version: 0.6.0
+- name: okdp-ui
+  repository: oci://quay.io/okdp/charts
+  version: 0.6.0
+digest: sha256:a8baeb82d8600ba7876e1e302a837e4525e71896e3eda8b6f281f63e54c13d03
+generated: "2026-08-18T10:55:13.31243+02:00"

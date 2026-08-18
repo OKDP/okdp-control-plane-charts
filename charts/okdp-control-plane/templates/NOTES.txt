@@ -1,0 +1,27 @@
+{{- $server := index .Values "okdp-server" -}}
+{{- $ui := index .Values "okdp-ui" -}}
+OKDP control plane {{ .Chart.AppVersion }} (chart {{ .Chart.Version }}) installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+{{- if $ui.enabled }}
+
+Console:
+  {{ include "okdp-control-plane.consoleUrl" . }}
+  (ingress class "{{ $ui.ingress.className }}", TLS via ClusterIssuer "{{ $ui.ingress.clusterIssuer }}")
+{{- end }}
+{{- if $server.enabled }}
+
+API server (in-cluster):
+  http://{{ $ui.backend.service }}.{{ .Release.Namespace }}.svc:{{ $ui.backend.port }}
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ $ui.backend.service }} {{ $ui.backend.port }}:{{ $ui.backend.port }}
+  curl -s http://localhost:{{ $ui.backend.port }}/health
+{{- end }}
+{{- if .Values.oidcClient.enabled }}
+
+OIDC client "{{ .Values.oidcClient.name }}" registered in namespace "{{ include "okdp-control-plane.oidcClientNamespace" . }}" for {{ include "okdp-control-plane.consoleUrl" . }}.
+{{- else }}
+
+oidcClient.enabled=false: make sure an OidcClient "okdp-app" allowing {{ include "okdp-control-plane.consoleUrl" . }} exists, otherwise the console login fails.
+{{- end }}
+
+Check the pods:
+  kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}

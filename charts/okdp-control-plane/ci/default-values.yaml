@@ -1,0 +1,4 @@
+# Values used by chart-testing (`ct install`) on a bare Kind cluster: no
+# kubauth CRDs, no ingress controller and no cert-manager are available there.
+oidcClient:
+  enabled: false

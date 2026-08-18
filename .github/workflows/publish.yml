@@ -1,0 +1,95 @@
+#
+# Copyright 2026 The OKDP Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: publish
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  # Only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Setup helm
+        uses: azure/setup-helm@v5
+        with:
+          version: v3.15.1
+
+      - name: Set up OCI charts registry
+        id: registry
+        run: |
+          registry="${{ vars.REGISTRY || 'quay.io' }}"
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "registry=$registry" >> "$GITHUB_OUTPUT"
+          echo "oci_repository=oci://$registry/$owner/charts" >> "$GITHUB_OUTPUT"
+
+      - name: Login into ${{ steps.registry.outputs.registry }} OCI charts registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ steps.registry.outputs.registry }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_ROBOT_TOKEN }}
+
+      - name: Package and push Helm charts
+        run: |
+          oci_repository="${{ steps.registry.outputs.oci_repository }}"
+          mkdir -p .helm-packages
+
+          mapfile -t charts < <(find charts -mindepth 2 -maxdepth 2 -name Chart.yaml -print | sort)
+          if [ "${#charts[@]}" -eq 0 ]; then
+            echo "No Helm charts found in charts/"
+            exit 1
+          fi
+
+          for chart_yaml in "${charts[@]}"; do
+            chart="$(dirname "$chart_yaml")"
+            chart_name="$(helm show chart "$chart" | awk -F ': *' '$1 == "name" {print $2; exit}')"
+            version="$(helm show chart "$chart" | awk -F ': *' '$1 == "version" {print $2; exit}')"
+
+            if helm show chart "$oci_repository/$chart_name" --version "$version" >/dev/null 2>&1; then
+              echo "Skipping $chart_name $version because it already exists in $oci_repository"
+              continue
+            fi
+
+            echo "Packaging $chart_name $version from $chart"
+            helm dependency build "$chart"
+            helm package "$chart" --destination .helm-packages
+          done
+
+          shopt -s nullglob
+          packages=(.helm-packages/*.tgz)
+
+          if [ "${#packages[@]}" -eq 0 ]; then
+            echo "No new Helm chart packages to push"
+            exit 0
+          fi
+
+          for package in "${packages[@]}"; do
+            echo "Pushing $package to $oci_repository"
+            helm push "$package" "$oci_repository"
+          done

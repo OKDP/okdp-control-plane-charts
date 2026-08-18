@@ -1,0 +1,173 @@
+#
+# Copyright 2026 The OKDP Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: helm lint and test
+
+on:
+  workflow_call:
+    inputs:
+      skip_chart_test:
+        description: Whether to deploy and test the charts
+        required: false
+        type: boolean
+        default: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  helm-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup helm
+        uses: azure/setup-helm@v5
+        with:
+          version: v3.15.1
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.6.1
+
+      - name: Run chart-testing (list-changed)
+        id: list-changed
+        run: |
+          set +e
+          changed="$(ct list-changed --config .ct.yml 2>&1)"
+          status=$?
+          set -e
+
+          echo "$changed"
+
+          if [ "$status" -ne 0 ]; then
+            echo "::warning::ct list-changed failed; falling back to all charts"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "all=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -n "$changed" ]; then
+            {
+              echo "list_changed<<EOF"
+              echo "$changed"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "all=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run YAML lint diagnostics
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          mapfile -t yaml_files < <(
+            find charts -mindepth 2 -maxdepth 2 \( -name Chart.yaml -o -name values.yaml \) -print | sort
+          )
+
+          if [ "${#yaml_files[@]}" -eq 0 ]; then
+            echo "No chart YAML files found to lint"
+            exit 0
+          fi
+
+          echo "::group::yamllint chart metadata and values"
+          if command -v yamllint >/dev/null 2>&1; then
+            yamllint_cmd=(yamllint)
+          else
+            yamllint_cmd=(python -m yamllint)
+          fi
+
+          set +e
+          "${yamllint_cmd[@]}" -f parsable -c .lintconf.yaml "${yaml_files[@]}"
+          status=$?
+          set -e
+          echo "::endgroup::"
+
+          if [ "$status" -ne 0 ]; then
+            echo "::error::YAML lint failed. The yamllint output above includes the exact file, line, column, and rule."
+            exit "$status"
+          fi
+
+      - name: Run chart-testing (lint)
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          args=()
+          if [ "${{ steps.list-changed.outputs.all }}" = "true" ]; then
+            args+=(--all)
+          fi
+
+          echo "::group::ct lint"
+          set +e
+          ct lint --config .ct.yml --check-version-increment=false --print-config "${args[@]}" 2>&1 | tee /tmp/ct-lint.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "::endgroup::"
+
+          if [ "$status" -ne 0 ]; then
+            echo "::error::ct lint failed. Review the ct lint log above; yamllint issues are reported earlier with exact file and line details."
+            exit "$status"
+          fi
+
+      - name: Free up disk space
+        if: steps.list-changed.outputs.changed == 'true' && inputs.skip_chart_test == false
+        uses: okdp/gh-workflows/.github/actions/free-disk-space@v1
+
+      - name: Set up kind cluster
+        if: steps.list-changed.outputs.changed == 'true' && inputs.skip_chart_test == false
+        uses: okdp/gh-workflows/.github/actions/setup-kind@v1
+
+      - name: Run chart-testing (install)
+        if: steps.list-changed.outputs.changed == 'true' && inputs.skip_chart_test == false
+        run: |
+          kubectl get events -A -w &
+          events_pid=$!
+          trap 'kill "$events_pid" 2>/dev/null || true' EXIT
+
+          args=()
+          if [ "${{ steps.list-changed.outputs.all }}" = "true" ]; then
+            args+=(--all)
+          fi
+
+          echo "Running chart install tests with .ct-install.yml"
+          ct install --config .ct-install.yml --namespace default --print-config "${args[@]}"
+
+      - name: Install helm-docs
+        uses: okdp/gh-workflows/.github/actions/helm-docs@v1
+
+      - name: Generate helm docs
+        run: |
+          echo "Generate docs from charts"
+          helm-docs -c .
+
+      - name: Commit helm docs changes
+        # GitHub token from forked repos does not have permission to push to target repo.
+        if: |
+          ${{ ((github.event_name == 'push') || (github.event_name == 'pull_request'
+                && github.event.pull_request.head.repo.full_name == github.repository)) }}
+        uses: EndBug/add-and-commit@v9
+        with:
+          pull: "--rebase --autostash"
+          add: "**/README.md"
+          message: "[helm-docs] Update readme"
+          author_name: github-actions[bot]
+          author_email: 41898282+github-actions[bot]@users.noreply.github.com

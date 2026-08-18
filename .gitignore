@@ -1,0 +1,10 @@
+# Helm
+charts/*/charts/*.tgz
+.helm-packages/
+*.tgz
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

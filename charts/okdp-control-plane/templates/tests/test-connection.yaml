@@ -1,0 +1,33 @@
+{{- $server := index .Values "okdp-server" -}}
+{{- $ui := index .Values "okdp-ui" -}}
+{{- if or $server.enabled $ui.enabled }}
+# `helm test`: checks the health endpoints of the deployed components from
+# inside the cluster (also run by chart-testing in CI).
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "okdp-control-plane.fullname" . }}-test-connection
+  labels:
+    {{- include "okdp-control-plane.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test
+      image: {{ .Values.tests.image | quote }}
+      command: ["/bin/sh", "-ec"]
+      args:
+        - |
+          {{- if $server.enabled }}
+          echo "okdp-server: http://{{ $ui.backend.service }}:{{ $ui.backend.port }}/health"
+          wget -q -O - -T 10 "http://{{ $ui.backend.service }}:{{ $ui.backend.port }}/health"
+          echo
+          {{- end }}
+          {{- if $ui.enabled }}
+          echo "okdp-ui: http://{{ include "okdp-control-plane.uiServiceName" . }}:{{ $ui.service.port }}/health"
+          wget -q -O - -T 10 "http://{{ include "okdp-control-plane.uiServiceName" . }}:{{ $ui.service.port }}/health"
+          echo
+          {{- end }}
+{{- end }}
