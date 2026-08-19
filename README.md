@@ -80,14 +80,24 @@ model the server builds on.
 - Kubernetes cluster with [KuboCD](https://github.com/kubotal/kubocd) installed (`Context` and
   `Release` CRDs) and a `Context` holding the service catalog
 - [kubauth](https://github.com/kubotal/kubauth) as OIDC provider (`OidcClient` CRD); the console
-  is built for `https://kubauth.<ingress suffix>` with the client id `okdp-app`
+  is built for `https://kubauth.<ingress suffix>` with the client id `okdp-app`, and kubauth must
+  allow the console origin in CORS (`nginx.ingress.kubernetes.io/cors-allow-origin` on its
+  ingress, e.g. `https://console.<ingress suffix>`): the browser loads the OIDC configuration
+  from kubauth, so without it the console "Sign in" button does nothing
 - an ingress controller (`nginx` by default) and cert-manager with the ClusterIssuer named in
   `okdp-ui.ingress.clusterIssuer`
 - metrics-server (optional, resource usage panels of the console)
 - [Helm](https://helm.sh/) >= 3.8 (OCI registries)
 
 The [okdp-control-plane-dev-sandbox](https://github.com/OKDP/okdp-control-plane-dev-sandbox)
-provides all of the above on a local Kind cluster.
+provides all of the above on a local Kind cluster. Its kubauth only allows the local console
+origin (`http://localhost:4200`) in CORS; allow the in-cluster console as well before installing
+the chart:
+
+```sh
+kubectl patch release kubauth -n okdp-system --type merge \
+  -p '{"spec":{"parameters":{"oidc":{"ingress":{"annotations":{"nginx.ingress.kubernetes.io/cors-allow-origin":"http://localhost:4200, https://console.okdp.dev-sandbox"}}}}}}'
+```
 
 Known-good baseline: chart `0.1.0` with `okdp-server` `0.6.0` and `okdp-ui` `0.6.0`, on a Kind
 cluster. This is the version set validated by the maintainers.
