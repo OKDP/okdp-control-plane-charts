@@ -1,6 +1,6 @@
 # okdp-control-plane
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.7.1](https://img.shields.io/badge/AppVersion-0.7.1-informational?style=flat-square)
+![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.7.1](https://img.shields.io/badge/AppVersion-0.7.1-informational?style=flat-square)
 
 OKDP control plane - API server and web console deployed together
 
@@ -38,7 +38,7 @@ provides all of the above on a local Kind cluster.
 
 ```bash
 helm install okdp-control-plane oci://quay.io/okdp/charts/okdp-control-plane \
-  --version 0.1.0 \
+  --version 0.2.0 \
   -n okdp-system --create-namespace \
   --set okdp-control-plane-ui.ingress.host=console.okdp.dev-sandbox
 ```
