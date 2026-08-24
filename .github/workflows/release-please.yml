@@ -17,6 +17,9 @@
 name: release-please
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     types:
       - closed
@@ -40,8 +43,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       github_releases: ${{ steps.github-releases.outputs.result }}
-    # The pull request should come from the same repo (github_token from a fork does not have write permissions)
-    if: github.event.pull_request.merged == true && github.event.pull_request.head.repo.full_name == github.repository
+    # Direct pushes to main, or merged pull requests from the same repo
+    # (github_token from a fork does not have write permissions).
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.pull_request.merged == true && github.event.pull_request.head.repo.full_name == github.repository)
     steps:
       - uses: googleapis/release-please-action@v4
         id: release-please
