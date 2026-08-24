@@ -1,14 +1,14 @@
 {{- /*
 Stable Service in front of the API server pods.
 
-The okdp-ui sub-chart routes /api to a Service whose name is a plain value
-(okdp-ui.backend.service), while the okdp-server sub-chart names its Service
-after the release (<release>-okdp-server). This Service carries the stable
+The okdp-control-plane-ui sub-chart routes /api to a Service whose name is a
+plain value (okdp-control-plane-ui.backend.service), while the server sub-chart
+names its Service after the release (<release>-okdp-control-plane-server). This Service carries the stable
 name the console ingress expects, whatever the release name, by selecting the
 same pods as the sub-chart Service. It is skipped when both names coincide.
 */ -}}
-{{- $server := index .Values "okdp-server" -}}
-{{- $ui := index .Values "okdp-ui" -}}
+{{- $server := index .Values "okdp-control-plane-server" -}}
+{{- $ui := index .Values "okdp-control-plane-ui" -}}
 {{- if and $server.enabled (ne $ui.backend.service (include "okdp-control-plane.serverServiceName" .)) }}
 apiVersion: v1
 kind: Service
@@ -25,7 +25,7 @@ spec:
       targetPort: http
       protocol: TCP
   selector:
-    # Selector labels of the okdp-server sub-chart Deployment.
-    app.kubernetes.io/name: okdp-server
+    # Selector labels of the server sub-chart Deployment.
+    app.kubernetes.io/name: okdp-control-plane-server
     app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}

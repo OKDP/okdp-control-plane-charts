@@ -2,3 +2,7 @@
 # kubauth CRDs, no ingress controller and no cert-manager are available there.
 oidcClient:
   enabled: false
+okdp-control-plane-ui:
+  oidc:
+    # Required by the sub-chart; no real issuer exists on a bare CI cluster.
+    authority: https://kubauth.ci.invalid

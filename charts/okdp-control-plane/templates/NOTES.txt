@@ -1,5 +1,5 @@
-{{- $server := index .Values "okdp-server" -}}
-{{- $ui := index .Values "okdp-ui" -}}
+{{- $server := index .Values "okdp-control-plane-server" -}}
+{{- $ui := index .Values "okdp-control-plane-ui" -}}
 OKDP control plane {{ .Chart.AppVersion }} (chart {{ .Chart.Version }}) installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
 
 {{- if $ui.enabled }}

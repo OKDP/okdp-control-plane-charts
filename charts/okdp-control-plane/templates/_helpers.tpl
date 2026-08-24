@@ -37,22 +37,23 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Name of the Service rendered by the okdp-server sub-chart. Mirrors the
-sub-chart "okdp-server.fullname" helper (no fullnameOverride there).
+Name of the Service rendered by the okdp-control-plane-server sub-chart.
+Mirrors the sub-chart "okdp-control-plane-server.fullname" helper (no
+fullnameOverride there).
 */}}
 {{- define "okdp-control-plane.serverServiceName" -}}
-{{- if contains "okdp-server" .Release.Name }}
+{{- if contains "okdp-control-plane-server" .Release.Name }}
 {{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- else }}
-{{- printf "%s-okdp-server" .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- printf "%s-okdp-control-plane-server" .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 {{- end }}
 
 {{/*
-Public URL of the console: oidcClient.publicUrl, or https://<okdp-ui.ingress.host>.
+Public URL of the console: oidcClient.publicUrl, or https://<okdp-control-plane-ui.ingress.host>.
 */}}
 {{- define "okdp-control-plane.consoleUrl" -}}
-{{- $ui := index .Values "okdp-ui" -}}
+{{- $ui := index .Values "okdp-control-plane-ui" -}}
 {{- .Values.oidcClient.publicUrl | default (printf "https://%s" $ui.ingress.host) | trimSuffix "/" -}}
 {{- end }}
 
@@ -61,18 +62,19 @@ Namespace of the OidcClient: oidcClient.namespace, or the server platform
 namespace, or the release namespace.
 */}}
 {{- define "okdp-control-plane.oidcClientNamespace" -}}
-{{- $server := index .Values "okdp-server" -}}
+{{- $server := index .Values "okdp-control-plane-server" -}}
 {{- .Values.oidcClient.namespace | default $server.configuration.platformNamespace | default .Release.Namespace -}}
 {{- end }}
 
 {{/*
-Name of the Service rendered by the okdp-ui sub-chart. Mirrors the
-sub-chart "okdp-ui.fullname" helper (no fullnameOverride there).
+Name of the Service rendered by the okdp-control-plane-ui sub-chart. Mirrors
+the sub-chart "okdp-control-plane-ui.fullname" helper (no fullnameOverride
+there).
 */}}
 {{- define "okdp-control-plane.uiServiceName" -}}
-{{- if contains "okdp-ui" .Release.Name }}
+{{- if contains "okdp-control-plane-ui" .Release.Name }}
 {{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- else }}
-{{- printf "%s-okdp-ui" .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- printf "%s-okdp-control-plane-ui" .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 {{- end }}

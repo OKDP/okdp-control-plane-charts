@@ -1,9 +1,9 @@
 dependencies:
-- name: okdp-server
+- name: okdp-control-plane-server
   repository: oci://quay.io/okdp/charts
-  version: 0.6.0
-- name: okdp-ui
+  version: 0.7.1
+- name: okdp-control-plane-ui
   repository: oci://quay.io/okdp/charts
-  version: 0.6.0
-digest: sha256:a8baeb82d8600ba7876e1e302a837e4525e71896e3eda8b6f281f63e54c13d03
-generated: "2026-08-18T10:55:13.31243+02:00"
+  version: 0.7.0
+digest: sha256:f6c3fa94a325f355ebc99118eac8bf879a06b818f68a395c2ae1d23d8e3c66d2
+generated: "2026-08-24T11:05:52.00619+02:00"

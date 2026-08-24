@@ -11,15 +11,15 @@ component repositories, plus the platform glue needed to run them together:
 
 | Component | Sub-chart | Source |
 | --- | --- | --- |
-| API server (Go, REST + SSE, drives KuboCD) | [`okdp-server`](https://quay.io/repository/okdp/charts/okdp-server) | [okdp-control-plane-server](https://github.com/OKDP/okdp-control-plane-server) |
-| Web console (SPA served by nginx, ingress) | [`okdp-ui`](https://quay.io/repository/okdp/charts/okdp-ui) | [okdp-control-plane-ui](https://github.com/OKDP/okdp-control-plane-ui) |
+| API server (Go, REST + SSE, drives KuboCD) | [`okdp-control-plane-server`](https://quay.io/repository/okdp/charts/okdp-control-plane-server) | [okdp-control-plane-server](https://github.com/OKDP/okdp-control-plane-server) |
+| Web console (SPA served by nginx, ingress) | [`okdp-control-plane-ui`](https://quay.io/repository/okdp/charts/okdp-control-plane-ui) | [okdp-control-plane-ui](https://github.com/OKDP/okdp-control-plane-ui) |
 
 On top of the sub-charts it renders:
 
 - a stable `okdp-server` Service (name configurable with `okdp-ui.backend.service`)
   in front of the API server pods, so the console `/api` routing does not depend
   on the Helm release name;
-- the kubauth `OidcClient` of the console (`okdp-app`), registering the console
+- the kubauth `OidcClient` of the console (`okdp-ui`), registering the console
   public URL as an allowed redirect URI;
 - a `helm test` pod checking the health endpoints of both components.
 
@@ -42,7 +42,7 @@ provides all of the above on a local Kind cluster.
 helm install okdp-control-plane oci://quay.io/okdp/charts/{{ template "chart.name" . }} \
   --version {{ template "chart.version" . }} \
   -n okdp-system --create-namespace \
-  --set okdp-ui.ingress.host=console.okdp.dev-sandbox
+  --set okdp-control-plane-ui.ingress.host=console.okdp.dev-sandbox
 ```
 
 From a local checkout:

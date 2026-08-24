@@ -1,5 +1,5 @@
-{{- $server := index .Values "okdp-server" -}}
-{{- $ui := index .Values "okdp-ui" -}}
+{{- $server := index .Values "okdp-control-plane-server" -}}
+{{- $ui := index .Values "okdp-control-plane-ui" -}}
 {{- if or $server.enabled $ui.enabled }}
 # `helm test`: checks the health endpoints of the deployed components from
 # inside the cluster (also run by chart-testing in CI).

@@ -52,7 +52,7 @@
     <text x="80"   y="278">User</text>
     <text x="275"  y="278">Ingress</text>
     <text x="245"  y="119">kubauth</text>
-    <text x="530"  y="120">OidcClient okdp-app</text>
+    <text x="530"  y="120">OidcClient okdp-ui</text>
     <text x="530"  y="282">OKDP Console</text>
     <text x="775"  y="284">Service okdp-server</text>
     <text x="1035" y="282" font-size="16" font-weight="bold">Control Plane Server</text>
@@ -66,9 +66,9 @@
     <text x="275"  y="296">(nginx, TLS by cert-manager)</text>
     <text x="245"  y="137">(platform OIDC provider)</text>
     <text x="530"  y="138">(this chart)</text>
-    <text x="530"  y="302">(okdp-ui sub-chart)</text>
+    <text x="530"  y="302">(ui sub-chart)</text>
     <text x="775"  y="302">(this chart, stable name)</text>
-    <text x="1035" y="302">(okdp-server sub-chart)</text>
+    <text x="1035" y="302">(server sub-chart)</text>
     <text x="1300" y="199">(cluster control plane)</text>
     <text x="1300" y="389">(GitOps engine)</text>
   </g>

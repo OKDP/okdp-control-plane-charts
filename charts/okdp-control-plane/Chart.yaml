@@ -3,8 +3,8 @@ name: okdp-control-plane
 description: OKDP control plane - API server and web console deployed together
 type: application
 version: 0.1.0
-# Version of the control plane components (okdp-server / okdp-ui) shipped by this chart.
-appVersion: "0.6.0"
+# Version of the control plane shipped by this chart (server 0.7.1 / ui 0.7.0).
+appVersion: "0.7.1"
 home: https://okdp.io
 icon: https://okdp.io/logos/okdp-notext.svg
 keywords:
@@ -16,12 +16,12 @@ sources:
   - https://github.com/OKDP/okdp-control-plane-ui
 dependencies:
   # API server (Go). Published by okdp-control-plane-server on release.
-  - name: okdp-server
-    version: "0.6.0"
+  - name: okdp-control-plane-server
+    version: "0.7.1"
     repository: oci://quay.io/okdp/charts
-    condition: okdp-server.enabled
+    condition: okdp-control-plane-server.enabled
   # Web console (static bundle served by nginx). Published by okdp-control-plane-ui on release.
-  - name: okdp-ui
-    version: "0.6.0"
+  - name: okdp-control-plane-ui
+    version: "0.7.0"
     repository: oci://quay.io/okdp/charts
-    condition: okdp-ui.enabled
+    condition: okdp-control-plane-ui.enabled
