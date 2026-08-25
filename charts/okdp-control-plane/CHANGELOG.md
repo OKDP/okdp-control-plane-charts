@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/OKDP/okdp-control-plane-charts/compare/helm-okdp-control-plane/v0.2.0...helm-okdp-control-plane/v0.2.1) (2026-08-25)
+
+
+### Documentation
+
+* separate install requirements from runtime requirements ([e994af2](https://github.com/OKDP/okdp-control-plane-charts/commit/e994af263990abd5b590289ab54044c377d42e40))
+
 ## [0.2.0](https://github.com/OKDP/okdp-control-plane-charts/compare/helm-okdp-control-plane/v0.1.0...helm-okdp-control-plane/v0.2.0) (2026-08-24)
 
 
