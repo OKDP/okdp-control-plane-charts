@@ -42,9 +42,13 @@ together.
   - a `helm test` pod checking the health endpoints of both components.
 - **OCI package** `oci://quay.io/okdp/charts/okdp-control-plane`, published on release.
 
+<!-- release-please rewrites the first version of each line in the block below,
+     so the chart version has to come before the sub-chart versions on its row. -->
+<!-- x-release-please-start-version -->
 | Chart | Version | Control plane (`appVersion`) | Sub-charts |
 |---|---|---|---|
 | [`okdp-control-plane`](charts/okdp-control-plane) | `0.2.0` | `0.7.x` | `okdp-control-plane-server` 0.7.1, `okdp-control-plane-ui` 0.7.0 |
+<!-- x-release-please-end -->
 
 Repository layout:
 
@@ -100,8 +104,9 @@ kubectl patch release kubauth -n okdp-system --type merge \
   -p '{"spec":{"parameters":{"oidc":{"ingress":{"annotations":{"nginx.ingress.kubernetes.io/cors-allow-origin":"http://localhost:4200, https://console.okdp.dev-sandbox"}}}}}}'
 ```
 
-Known-good baseline: chart `0.2.0` with `okdp-control-plane-server` `0.7.1` and `okdp-control-plane-ui` `0.7.0`, on a Kind
-cluster. This is the version set validated by the maintainers.
+Known-good baseline: chart `0.2.0` <!-- x-release-please-version -->
+with `okdp-control-plane-server` `0.7.1` and `okdp-control-plane-ui` `0.7.0`, on a Kind cluster.
+This is the version set validated by the maintainers.
 
 ### Toolchain tested
 
@@ -125,11 +130,13 @@ kubectl get crd contexts.kubocd.kubotal.io releases.kubocd.kubotal.io oidcclient
 
 Install the chart from the OKDP registry:
 
+<!-- x-release-please-start-version -->
 ```sh
 helm install okdp-control-plane oci://quay.io/okdp/charts/okdp-control-plane --version 0.2.0 \
   -n okdp-system --create-namespace \
   --set okdp-control-plane-ui.ingress.host=console.okdp.dev-sandbox
 ```
+<!-- x-release-please-end -->
 
 Once the pods are `Running`, check the release and open the console:
 
