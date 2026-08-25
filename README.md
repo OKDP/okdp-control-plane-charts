@@ -68,7 +68,9 @@ Repository layout:
 
 > **OKDP deployment context:** the chart installs the console and the API server **in the
 > same release**. The browser only talks to the console origin: nginx serves the static bundle
-> and proxies `/api` to the in-cluster `okdp-server` Service, so no CORS is involved. The
+> and proxies `/api` to the in-cluster `okdp-server` Service, so no CORS is involved between the
+> console and the API. The browser still calls kubauth directly to load the OIDC configuration,
+> which is why kubauth must allow the console origin (see Requirements). The
 > platform provides the ingress controller, cert-manager, the OIDC provider (kubauth) and the
 > GitOps engine (KuboCD); the chart only registers the console with kubauth through an
 > `OidcClient` and renders the Ingress of the console.
@@ -81,18 +83,29 @@ model the server builds on.
 
 ## Requirements
 
-- Kubernetes cluster with [KuboCD](https://github.com/kubotal/kubocd) installed (`Context` and
-  `Release` CRDs) and a `Context` holding the service catalog
-- [kubauth](https://github.com/kubotal/kubauth) as OIDC provider (`OidcClient` CRD); the console
-  authenticates against `okdp-control-plane-ui.oidc.authority` (injected at container startup),
-  and kubauth must allow the console origin in CORS
-  (`nginx.ingress.kubernetes.io/cors-allow-origin` on its
-  ingress, e.g. `https://console.<ingress suffix>`): the browser loads the OIDC configuration
-  from kubauth, so without it the console "Sign in" button does nothing
+To install the chart:
+
+- a Kubernetes cluster, and [Helm](https://helm.sh/) >= 3.8 (OCI registries).
+- the kubauth `OidcClient` CRD (`oidcclients.kubauth.kubotal.io`), unless
+  `oidcClient.enabled=false`: the chart registers the console as an OIDC client, and the install
+  fails while that CRD is absent.
+
+For the control plane to work once installed:
+
+- [KuboCD](https://github.com/kubotal/kubocd) and a `Context` holding the service catalog: the
+  server reads the catalog from that `Context` and creates the `Release` resources KuboCD
+  reconciles. Without it the pods start and the console loads, but `/api/capabilities` and
+  `/api/platform-services` answer `500`, so the catalog is empty, no service can be deployed,
+  and the console keeps the Identity area visible although the platform cannot serve it.
+- [kubauth](https://github.com/kubotal/kubauth) as OIDC provider, at the URL set in
+  `okdp-control-plane-ui.oidc.authority` and injected at container startup (a `Context`
+  publishing `identity.oidc` overrides it). The browser loads the OIDC configuration from
+  kubauth directly, so its ingress must allow the console origin in CORS
+  (`nginx.ingress.kubernetes.io/cors-allow-origin`, e.g. `https://console.<ingress suffix>`);
+  without it the console "Sign in" button does nothing.
 - an ingress controller (`nginx` by default) and cert-manager with the ClusterIssuer named in
-  `okdp-control-plane-ui.ingress.clusterIssuer`
-- metrics-server (optional, resource usage panels of the console)
-- [Helm](https://helm.sh/) >= 3.8 (OCI registries)
+  `okdp-control-plane-ui.ingress.clusterIssuer`.
+- metrics-server (optional, resource usage panels of the console).
 
 The [okdp-control-plane-dev-sandbox](https://github.com/OKDP/okdp-control-plane-dev-sandbox)
 provides all of the above on a local Kind cluster. Its kubauth only allows the local console
@@ -121,8 +134,8 @@ This is the version set validated by the maintainers.
 
 ## Installation
 
-The chart runs on a cluster meeting the requirements above (the `Context`, `Release` and
-`OidcClient` CRDs must exist):
+Check the cluster provides what the control plane needs (see the requirements above); only the
+`OidcClient` CRD has to exist for `helm install` to succeed:
 
 ```sh
 kubectl get crd contexts.kubocd.kubotal.io releases.kubocd.kubotal.io oidcclients.kubauth.kubotal.io

@@ -16,7 +16,8 @@ component repositories, plus the platform glue needed to run them together:
 
 On top of the sub-charts it renders:
 
-- a stable `okdp-server` Service (name configurable with `okdp-ui.backend.service`)
+- a stable `okdp-server` Service (name configurable with
+  `okdp-control-plane-ui.backend.service`)
   in front of the API server pods, so the console `/api` routing does not depend
   on the Helm release name;
 - the kubauth `OidcClient` of the console (`okdp-ui`), registering the console
@@ -25,16 +26,21 @@ On top of the sub-charts it renders:
 
 ## Prerequisites
 
-- Kubernetes cluster with [KuboCD](https://github.com/kubocd/kubocd) (`Context`
-  and `Release` CRDs) and a `Context` holding the service catalog;
-- [kubauth](https://github.com/kubotal/kubauth) as OIDC provider (the console is
-  built against `https://kubauth.<ingress suffix>` with client id `okdp-app`);
+To install the chart: a Kubernetes cluster, Helm >= 3.8, and the kubauth
+`OidcClient` CRD unless `oidcClient.enabled=false`.
+
+For the control plane to work once installed:
+
+- [KuboCD](https://github.com/kubotal/kubocd) and a `Context` holding the service
+  catalog, which the server reads and writes `Release` resources against;
+- [kubauth](https://github.com/kubotal/kubauth) as OIDC provider, at the URL set
+  in `okdp-control-plane-ui.oidc.authority`, allowing the console origin in CORS;
 - an ingress controller (`nginx` by default) and cert-manager with the
-  ClusterIssuer named in `okdp-ui.ingress.clusterIssuer`;
+  ClusterIssuer named in `okdp-control-plane-ui.ingress.clusterIssuer`;
 - metrics-server (optional, resource usage panels).
 
 The [okdp-control-plane-dev-sandbox](https://github.com/OKDP/okdp-control-plane-dev-sandbox)
-provides all of the above on a local Kind cluster.
+provides everything above on a local Kind cluster.
 
 ## Install
 

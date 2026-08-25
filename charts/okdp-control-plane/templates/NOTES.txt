@@ -20,7 +20,7 @@ API server (in-cluster):
 OIDC client "{{ .Values.oidcClient.name }}" registered in namespace "{{ include "okdp-control-plane.oidcClientNamespace" . }}" for {{ include "okdp-control-plane.consoleUrl" . }}.
 {{- else }}
 
-oidcClient.enabled=false: make sure an OidcClient "okdp-app" allowing {{ include "okdp-control-plane.consoleUrl" . }} exists, otherwise the console login fails.
+oidcClient.enabled=false: make sure an OidcClient "{{ .Values.oidcClient.name }}" allowing {{ include "okdp-control-plane.consoleUrl" . }} exists, otherwise the console login fails.
 {{- end }}
 
 Check the pods:
