@@ -1,8 +1,10 @@
-# Values used by chart-testing (`ct install`) on a bare Kind cluster: no
-# kubauth CRDs, no ingress controller and no cert-manager are available there.
-oidcClient:
-  enabled: false
+# Values used by chart-testing (`ct install`) on a bare Kind cluster, which has
+# no OIDC provider, no ingress controller and no cert-manager.
 okdp-control-plane-ui:
   oidc:
-    # Required by the sub-chart; no real issuer exists on a bare CI cluster.
-    authority: https://kubauth.ci.invalid
+    # The console sub-chart requires an issuer URL; none is reachable here.
+    authority: https://oidc.ci.invalid
+oidcClient:
+  # Pinned rather than inherited: the OidcClient needs the kubauth CRD, which a
+  # bare cluster does not carry.
+  enabled: false

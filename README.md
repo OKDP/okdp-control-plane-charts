@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://okdp.io">
-    <img src="https://raw.githubusercontent.com/OKDP/okdp.io/master/src/assets/logos/okdp-inverted.png" alt="OKDP: Open Kubernetes Data Platform" height="180" />
+    <img src="https://okdp.io/logos/okdp-inverted.png" alt="OKDP: Open Kubernetes Data Platform" height="180" />
   </a>
 </p>
 
@@ -13,7 +13,7 @@
 Helm chart deploying the OKDP control plane as a whole: the API server
 ([okdp-control-plane-server](https://github.com/OKDP/okdp-control-plane-server)) and the web
 console ([okdp-control-plane-ui](https://github.com/OKDP/okdp-control-plane-ui)), wired together
-with the platform (in-cluster API Service, kubauth OIDC client, ingress).
+with the platform (in-cluster API Service, ingress, and optionally the OIDC client).
 
 ---
 
@@ -37,8 +37,9 @@ together.
   on the published `okdp-control-plane-server` and `okdp-control-plane-ui` charts, plus:
   - a stable `okdp-server` Service in front of the API server pods, so the console `/api`
     routing does not depend on the Helm release name;
-  - the kubauth `OidcClient` of the console (`okdp-ui`), registering the console public URL as
-    an allowed redirect URI;
+  - optionally, on platforms running kubauth, the `OidcClient` of the console
+    (`oidcClient.enabled`, off by default), registering the console public URL as an allowed
+    redirect URI;
   - a `helm test` pod checking the health endpoints of both components.
 - **OCI package** `oci://quay.io/okdp/charts/okdp-control-plane`, published on release.
 
@@ -67,13 +68,14 @@ Repository layout:
 </p>
 
 > **OKDP deployment context:** the chart installs the console and the API server **in the
-> same release**. The browser only talks to the console origin: nginx serves the static bundle
-> and proxies `/api` to the in-cluster `okdp-server` Service, so no CORS is involved between the
-> console and the API. The browser still calls kubauth directly to load the OIDC configuration,
-> which is why kubauth must allow the console origin (see Requirements). The
-> platform provides the ingress controller, cert-manager, the OIDC provider (kubauth) and the
-> GitOps engine (KuboCD); the chart only registers the console with kubauth through an
-> `OidcClient` and renders the Ingress of the console.
+> same release**. The browser only talks to the console origin: the console image serves the
+> static bundle and the ingress routes `/api` to the in-cluster `okdp-server` Service, so no CORS
+> is involved between the console and the API. The browser does call the OIDC provider directly
+> to load its configuration, which that provider must allow.
+>
+> The platform provides the ingress controller, cert-manager, the OIDC provider and the GitOps
+> engine (KuboCD). The chart renders the Ingress of the console and, for platforms running
+> kubauth, can declare the console's OIDC client (`oidcClient.enabled`, off by default).
 
 See the sub-chart repositories for the internals of each component, and the
 [KuboCD documentation](https://github.com/kubotal/kubocd) for the `Context` and `Release`
@@ -86,40 +88,30 @@ model the server builds on.
 To install the chart:
 
 - a Kubernetes cluster, and [Helm](https://helm.sh/) >= 3.8 (OCI registries).
-- the kubauth `OidcClient` CRD (`oidcclients.kubauth.kubotal.io`), unless
-  `oidcClient.enabled=false`: the chart registers the console as an OIDC client, and the install
-  fails while that CRD is absent.
+- the issuer URL of an OIDC provider, in `okdp-control-plane-ui.oidc.authority`. The chart
+  assumes no particular provider and creates no client there: register the client
+  `okdp-control-plane-ui.oidc.clientId` with the console URL as an allowed redirect URI. On a
+  platform running [kubauth](https://github.com/kubotal/kubauth), `oidcClient.enabled=true`
+  declares that client for you, which needs the kubauth CRD on the cluster.
 
 For the control plane to work once installed:
 
 - [KuboCD](https://github.com/kubotal/kubocd) and a `Context` holding the service catalog: the
   server reads the catalog from that `Context` and creates the `Release` resources KuboCD
-  reconciles. Without it the pods start and the console loads, but `/api/capabilities` and
-  `/api/platform-services` answer `500`, so the catalog is empty, no service can be deployed,
-  and the console keeps the Identity area visible although the platform cannot serve it.
-- [kubauth](https://github.com/kubotal/kubauth) as OIDC provider, at the URL set in
-  `okdp-control-plane-ui.oidc.authority` and injected at container startup (a `Context`
-  publishing `identity.oidc` overrides it). The browser loads the OIDC configuration from
-  kubauth directly, so its ingress must allow the console origin in CORS
-  (`nginx.ingress.kubernetes.io/cors-allow-origin`, e.g. `https://console.<ingress suffix>`);
-  without it the console "Sign in" button does nothing.
+  reconciles. Without it the pods start and the console loads, but the catalog is empty and no
+  service can be deployed.
 - an ingress controller (`nginx` by default) and cert-manager with the ClusterIssuer named in
   `okdp-control-plane-ui.ingress.clusterIssuer`.
+- an OIDC provider that allows the console origin, since the browser loads its configuration
+  directly; otherwise sign-in does nothing.
 - metrics-server (optional, resource usage panels of the console).
 
-The [okdp-control-plane-dev-sandbox](https://github.com/OKDP/okdp-control-plane-dev-sandbox)
-provides all of the above on a local Kind cluster. Its kubauth only allows the local console
-origin (`http://localhost:4200`) in CORS; allow the in-cluster console as well before installing
-the chart:
-
-```sh
-kubectl patch release kubauth -n okdp-system --type merge \
-  -p '{"spec":{"parameters":{"oidc":{"ingress":{"annotations":{"nginx.ingress.kubernetes.io/cors-allow-origin":"http://localhost:4200, https://console.okdp.dev-sandbox"}}}}}}'
-```
+The console's Identity pages (users and groups) are served by kubauth CRDs, so they stay
+unavailable with any other provider; everything else works the same.
 
 Known-good baseline: chart `0.2.0` <!-- x-release-please-version -->
-with `okdp-control-plane-server` `0.7.1` and `okdp-control-plane-ui` `0.7.0`, on a Kind cluster.
-This is the version set validated by the maintainers.
+with `okdp-control-plane-server` `0.7.1` and `okdp-control-plane-ui` `0.7.0`, on a Kind cluster,
+against kubauth as the OIDC provider. This is the version set validated by the maintainers.
 
 ### Toolchain tested
 
@@ -134,32 +126,51 @@ This is the version set validated by the maintainers.
 
 ## Installation
 
-Check the cluster provides what the control plane needs (see the requirements above); only the
-`OidcClient` CRD has to exist for `helm install` to succeed:
-
-```sh
-kubectl get crd contexts.kubocd.kubotal.io releases.kubocd.kubotal.io oidcclients.kubauth.kubotal.io
-```
-
-Install the chart from the OKDP registry:
+Install the chart from the OKDP registry, with the host the console is served on and the issuer
+of your OIDC provider:
 
 <!-- x-release-please-start-version -->
 ```sh
 helm install okdp-control-plane oci://quay.io/okdp/charts/okdp-control-plane --version 0.2.0 \
   -n okdp-system --create-namespace \
-  --set okdp-control-plane-ui.ingress.host=console.okdp.dev-sandbox
+  --set okdp-control-plane-ui.ingress.host=console.example.com \
+  --set okdp-control-plane-ui.oidc.authority=https://oidc.example.com
 ```
 <!-- x-release-please-end -->
 
-Once the pods are `Running`, check the release and open the console:
+`oidc.authority` has no default: the render fails without it rather than pointing the console at
+someone else's issuer. The client `okdp-ui` must exist there, with three redirect URIs —
+`https://<ingress host>`, `https://<ingress host>/` and
+`https://<ingress host>/silent-refresh.html` — and the same URL as post-logout redirect. On a
+platform running kubauth, `--set oidcClient.enabled=true` declares that client for you.
+
+Once the pods are `Running`, check the release; the install notes print the console URL:
 
 ```sh
 kubectl get pods -n okdp-system -l app.kubernetes.io/instance=okdp-control-plane
 helm test okdp-control-plane -n okdp-system
 ```
 
-The console is available at `https://console.okdp.dev-sandbox` (on the dev sandbox:
-`useradmin` / `password`).
+### On the OKDP dev sandbox
+
+The values matching the [dev sandbox](https://github.com/OKDP/okdp-control-plane-dev-sandbox)
+ship with the chart, from a checkout of this repository:
+
+```sh
+helm dependency update charts/okdp-control-plane
+helm install okdp-control-plane charts/okdp-control-plane -n okdp-system --create-namespace \
+  -f charts/okdp-control-plane/values-dev-sandbox.yaml
+```
+
+That file also carries the `kubectl patch` the sandbox needs to let kubauth answer the console
+origin, without which sign-in does nothing.
+
+### Upgrading from 0.2.0
+
+The defaults no longer target the dev sandbox, so a release installed on 0.2.0 defaults must now
+pass `-f values-dev-sandbox.yaml`, or set the same values. Upgrading without them deletes the
+`OidcClient` the release owned, which unregisters the console in kubauth, and moves the ingress
+host, the KuboCD `Context` and the admin role to neutral defaults.
 
 ---
 
@@ -182,27 +193,26 @@ Clone the repository, resolve the sub-charts and install from the local checkout
 git clone https://github.com/OKDP/okdp-control-plane-charts.git
 cd okdp-control-plane-charts
 helm dependency update charts/okdp-control-plane
-helm install okdp-control-plane charts/okdp-control-plane -n okdp-system --create-namespace
+helm install okdp-control-plane charts/okdp-control-plane -n okdp-system --create-namespace \
+  --set okdp-control-plane-ui.ingress.host=console.example.com \
+  --set okdp-control-plane-ui.oidc.authority=https://oidc.example.com
 ```
 
 Lint and test the chart the way CI does:
 
 ```sh
-helm lint charts/okdp-control-plane
+helm lint charts/okdp-control-plane -f charts/okdp-control-plane/values-dev-sandbox.yaml
 ct lint --config .ct.yml --all --check-version-increment=false
 kind create cluster && ct install --config .ct-install.yml --namespace default
 helm-docs -c .
 ```
 
-`ct install` uses the values in `charts/okdp-control-plane/ci/` (kubauth `OidcClient` disabled,
-as the CRD is absent on a bare cluster).
+`ct install` uses the values in `charts/okdp-control-plane/ci/`, which only carry an issuer URL:
+no OIDC provider runs on a bare cluster, and the console sub-chart requires one.
 
-Console development against the same cluster (`npm start` on `localhost:4200`) needs the dev
-origins on the OIDC client:
-
-```sh
---set 'oidcClient.extraRedirectURIs={http://localhost:4200,http://localhost:4200/,http://localhost:4200/silent-refresh.html}'
-```
+Developing the console against that cluster (`npm start` on `localhost:4200`) needs the local
+origins as redirect URIs on the client. `values-dev-sandbox.yaml` already lists them; with
+another provider, add them there.
 
 ### Upgrade the control-plane version
 
@@ -216,23 +226,24 @@ with a conventional commit message (`feat: ...`); release-please proposes the ch
 ## Configuration
 
 All values of the sub-charts are exposed under the `okdp-control-plane-server:` and
-`okdp-control-plane-ui:` keys; the most
-common ones are listed in [values.yaml](charts/okdp-control-plane/values.yaml) and every value
-is documented in the [chart README](charts/okdp-control-plane/README.md). Chart-specific
-settings:
+`okdp-control-plane-ui:` keys; the most common ones are listed in
+[values.yaml](charts/okdp-control-plane/values.yaml) and every value is documented in the
+[chart README](charts/okdp-control-plane/README.md). The values a deployment usually sets:
 
 | Value | Default | Description |
 |---|---|---|
-| `okdp-control-plane-ui.ingress.host` | `console.okdp.dev-sandbox` | Public host of the console |
+| `okdp-control-plane-ui.oidc.authority` | *(required)* | Issuer URL of the OIDC provider the console authenticates against |
+| `okdp-control-plane-ui.oidc.clientId` | `okdp-ui` | Client id the console uses, which must exist in that provider |
+| `okdp-control-plane-ui.ingress.host` | `okdp-ui.example.com` | Public host of the console |
 | `okdp-control-plane-ui.ingress.clusterIssuer` | `default-issuer` | cert-manager ClusterIssuer of the console certificate |
 | `okdp-control-plane-ui.backend.service` | `okdp-server` | Name of the stable Service rendered in front of the API server pods |
-| `okdp-control-plane-ui.oidc.authority` | `https://kubauth.okdp.dev-sandbox` | OIDC issuer of the console, injected at container startup |
-| `okdp-control-plane-ui.identity.adminRole` | `admins` | Role opening the administration pages (in the `groups` claim) |
 | `okdp-control-plane-server.configuration.*` | see values | Server environment (platform namespace, KuboCD context, log level, ...) |
-| `oidcClient.enabled` | `true` | Create the kubauth `OidcClient` of the console |
-| `oidcClient.namespace` | `okdp-control-plane-server.configuration.platformNamespace` | Namespace of the `OidcClient` (kubauth clients namespace) |
-| `oidcClient.publicUrl` | `https://<okdp-control-plane-ui.ingress.host>` | Console URL registered as redirect URI |
-| `oidcClient.extraRedirectURIs` | `[]` | Extra redirect URIs (console development) |
+| `oidcClient.enabled` | `false` | Declare the console client as a kubauth `OidcClient`; needs the kubauth CRD |
+| `oidcClient.extraRedirectURIs` | `[]` | Extra redirect URIs on that client (console development) |
+
+Values for the OKDP dev sandbox live in
+[values-dev-sandbox.yaml](charts/okdp-control-plane/values-dev-sandbox.yaml) rather than in the
+defaults, so the chart targets no particular platform.
 
 ---
 
@@ -244,5 +255,5 @@ Contributions follow the [OKDP contribution guide](https://github.com/OKDP/.gith
 
 **Built 🚀 for the OKDP Community**
 <a href="https://okdp.io">
-  <img src="https://okdp.io/okdp-notext.svg" height="20px" style="margin: 0 2px;" />
+  <img src="https://okdp.io/logos/okdp-notext.svg" height="20px" style="margin: 0 2px;" />
 </a>

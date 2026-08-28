@@ -20,27 +20,33 @@ On top of the sub-charts it renders:
   `okdp-control-plane-ui.backend.service`)
   in front of the API server pods, so the console `/api` routing does not depend
   on the Helm release name;
-- the kubauth `OidcClient` of the console (`okdp-ui`), registering the console
-  public URL as an allowed redirect URI;
+- optionally, for platforms running kubauth, the `OidcClient` of the console
+  (`oidcClient.enabled`, off by default), registering the console public URL as
+  an allowed redirect URI;
 - a `helm test` pod checking the health endpoints of both components.
 
 ## Prerequisites
 
-To install the chart: a Kubernetes cluster, Helm >= 3.8, and the kubauth
-`OidcClient` CRD unless `oidcClient.enabled=false`.
+To install the chart: a Kubernetes cluster, Helm >= 3.8, and the issuer URL of an
+OIDC provider in `okdp-control-plane-ui.oidc.authority`. The chart assumes no
+particular provider and creates no client there; with kubauth,
+`oidcClient.enabled=true` declares it, which needs the kubauth CRD.
 
 For the control plane to work once installed:
 
 - [KuboCD](https://github.com/kubotal/kubocd) and a `Context` holding the service
   catalog, which the server reads and writes `Release` resources against;
-- [kubauth](https://github.com/kubotal/kubauth) as OIDC provider, at the URL set
-  in `okdp-control-plane-ui.oidc.authority`, allowing the console origin in CORS;
+- an OIDC provider carrying the client `okdp-control-plane-ui.oidc.clientId`, with
+  `https://<host>`, `https://<host>/` and `https://<host>/silent-refresh.html` as
+  redirect URIs, and allowing the console origin. Only kubauth has been validated
+  so far; the console's Identity pages rely on its CRDs and stay unavailable with
+  another provider;
 - an ingress controller (`nginx` by default) and cert-manager with the
   ClusterIssuer named in `okdp-control-plane-ui.ingress.clusterIssuer`;
 - metrics-server (optional, resource usage panels).
 
-The [okdp-control-plane-dev-sandbox](https://github.com/OKDP/okdp-control-plane-dev-sandbox)
-provides everything above on a local Kind cluster.
+Values for the [okdp-control-plane-dev-sandbox](https://github.com/OKDP/okdp-control-plane-dev-sandbox),
+which provides all of it on a local Kind cluster, ship as `values-dev-sandbox.yaml`.
 
 ## Install
 
@@ -48,23 +54,30 @@ provides everything above on a local Kind cluster.
 helm install okdp-control-plane oci://quay.io/okdp/charts/{{ template "chart.name" . }} \
   --version {{ template "chart.version" . }} \
   -n okdp-system --create-namespace \
-  --set okdp-control-plane-ui.ingress.host=console.okdp.dev-sandbox
+  --set okdp-control-plane-ui.ingress.host=console.example.com \
+  --set okdp-control-plane-ui.oidc.authority=https://oidc.example.com
 ```
 
 From a local checkout:
 
 ```bash
 helm dependency update charts/{{ template "chart.name" . }}
-helm install okdp-control-plane charts/{{ template "chart.name" . }} -n okdp-system --create-namespace
+helm install okdp-control-plane charts/{{ template "chart.name" . }} -n okdp-system --create-namespace \
+  --set okdp-control-plane-ui.ingress.host=console.example.com \
+  --set okdp-control-plane-ui.oidc.authority=https://oidc.example.com
 helm test okdp-control-plane -n okdp-system
 ```
 
-Local development of the console (`npm start` on `localhost:4200`) against the
-same cluster: add the dev origins to the OIDC client.
+On the OKDP dev sandbox, use the values that ship with the chart instead:
 
 ```bash
---set 'oidcClient.extraRedirectURIs={http://localhost:4200,http://localhost:4200/,http://localhost:4200/silent-refresh.html}'
+helm install okdp-control-plane charts/{{ template "chart.name" . }} -n okdp-system \
+  --create-namespace -f charts/{{ template "chart.name" . }}/values-dev-sandbox.yaml
 ```
+
+Developing the console against the same cluster (`npm start` on `localhost:4200`)
+needs the local origins as redirect URIs on the client. `values-dev-sandbox.yaml`
+lists them; with another provider, add them there.
 
 ## Upgrade the control-plane version
 
