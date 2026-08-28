@@ -24,7 +24,7 @@ with these redirect URIs:
   {{ include "okdp-control-plane.consoleUrl" . }}/silent-refresh.html
 {{- end }}
 {{- if .Values.oidcClient.enabled }}
-Declared by this release as a kubauth OidcClient "{{ .Values.oidcClient.name }}" in namespace "{{ include "okdp-control-plane.oidcClientNamespace" . }}".
+Declared by this release as the OIDC client "{{ .Values.oidcClient.name }}" (an `OidcClient` resource) in namespace "{{ include "okdp-control-plane.oidcClientNamespace" . }}".
 {{- else }}
 Register it in your provider: the chart does not create it (oidcClient.enabled=false).
 {{- end }}

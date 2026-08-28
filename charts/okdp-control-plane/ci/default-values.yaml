@@ -5,6 +5,6 @@ okdp-control-plane-ui:
     # The console sub-chart requires an issuer URL; none is reachable here.
     authority: https://oidc.ci.invalid
 oidcClient:
-  # Pinned rather than inherited: the OidcClient needs the kubauth CRD, which a
+  # Pinned rather than inherited: the OidcClient needs its provider CRD, which a
   # bare cluster does not carry.
   enabled: false

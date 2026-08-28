@@ -75,16 +75,16 @@ okdp-control-plane-ui:
     tlsSecretName: okdp-ui-tls
   resources: {}
 
-# Optional registration of the console as an OIDC client, for platforms whose
-# provider is kubauth: it renders an `OidcClient` resource with the console URL
-# as an allowed redirect URI. Off by default, since it needs the kubauth CRD on
-# the cluster and the chart does not assume any provider. With any other
-# provider, register the client there and leave this disabled.
+# Optional registration of the console as an OIDC client, for providers that
+# model clients as Kubernetes resources: it renders an `OidcClient` with the
+# console URL as an allowed redirect URI. Off by default, since it needs that
+# provider's CRD on the cluster and the chart assumes no provider. Otherwise,
+# register the client in your provider and leave this disabled.
 oidcClient:
-  # -- Render the kubauth OidcClient for the console.
+  # -- Render the console's OIDC client as a Kubernetes resource.
   enabled: false
-  # -- Name of the OidcClient resource. kubauth uses it as client_id, so it must
-  # match `okdp-control-plane-ui.oidc.clientId`.
+  # -- Name of the OidcClient resource. The provider uses it as client_id, so it
+  # must match `okdp-control-plane-ui.oidc.clientId`.
   name: okdp-ui
   # -- Namespace of the OidcClient. Defaults to
   # okdp-control-plane-server.configuration.platformNamespace.
