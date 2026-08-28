@@ -18,27 +18,28 @@ On top of the sub-charts it renders:
   `okdp-control-plane-ui.backend.service`)
   in front of the API server pods, so the console `/api` routing does not depend
   on the Helm release name;
-- optionally, for platforms running kubauth, the `OidcClient` of the console
-  (`oidcClient.enabled`, off by default), registering the console public URL as
-  an allowed redirect URI;
+- optionally, the console's OIDC client created as a Kubernetes resource
+  (`oidcClient.enabled`, off by default), for providers that register clients so;
 - a `helm test` pod checking the health endpoints of both components.
 
 ## Prerequisites
 
-To install the chart: a Kubernetes cluster, Helm >= 3.8, and the issuer URL of an
-OIDC provider in `okdp-control-plane-ui.oidc.authority`. The chart assumes no
-particular provider and creates no client there; with kubauth,
-`oidcClient.enabled=true` declares it, which needs the kubauth CRD.
+To install the chart: a Kubernetes cluster, Helm >= 3.8, and an OIDC provider
+(Keycloak, Dex, or any OpenID Connect one). Set its issuer URL in
+`okdp-control-plane-ui.oidc.authority` and register a client there; the chart
+assumes no provider and creates none. For providers that register clients as
+Kubernetes resources, `oidcClient.enabled=true` creates it for you (needs its CRD).
 
 For the control plane to work once installed:
 
 - [KuboCD](https://github.com/kubotal/kubocd) and a `Context` holding the service
   catalog, which the server reads and writes `Release` resources against;
-- an OIDC provider carrying the client `okdp-control-plane-ui.oidc.clientId`, with
+- the OIDC provider carrying the client `okdp-control-plane-ui.oidc.clientId`, with
   `https://<host>`, `https://<host>/` and `https://<host>/silent-refresh.html` as
-  redirect URIs, and allowing the console origin. Only kubauth has been validated
-  so far; the console's Identity pages rely on its CRDs and stay unavailable with
-  another provider;
+  redirect URIs, and allowing the console origin. Sign-in is standard OpenID
+  Connect, so the login, the catalog and the services work the same on any
+  provider; only the console's Identity pages (users and groups) stay
+  provider-dependent, needing a provider that exposes user and group management;
 - an ingress controller (`nginx` by default) and cert-manager with the
   ClusterIssuer named in `okdp-control-plane-ui.ingress.clusterIssuer`;
 - metrics-server (optional, resource usage panels).
@@ -99,11 +100,11 @@ updated `Chart.lock`.
 | oidcClient.annotations | object | `{}` | Extra annotations added to the OidcClient. |
 | oidcClient.description | string | `"OIDC client for the OKDP web console"` |  |
 | oidcClient.displayName | string | `"OKDP Console"` |  |
-| oidcClient.enabled | bool | `false` | Render the kubauth OidcClient for the console. |
+| oidcClient.enabled | bool | `false` | Render the console's OIDC client as a Kubernetes resource. |
 | oidcClient.extraRedirectURIs | list | `[]` | Additional allowed redirect URIs (e.g. http://localhost:4200 to develop the console against this cluster). |
 | oidcClient.idTokenLifespan | string | `"1h0m0s"` |  |
 | oidcClient.labels | object | `{}` | Extra labels added to the OidcClient. |
-| oidcClient.name | string | `"okdp-ui"` | Name of the OidcClient resource. kubauth uses it as client_id, so it must match `okdp-control-plane-ui.oidc.clientId`. |
+| oidcClient.name | string | `"okdp-ui"` | Name of the OidcClient resource. The provider uses it as client_id, so it must match `okdp-control-plane-ui.oidc.clientId`. |
 | oidcClient.namespace | string | `""` | Namespace of the OidcClient. Defaults to okdp-control-plane-server.configuration.platformNamespace. |
 | oidcClient.publicUrl | string | `""` | Public URL of the console. Defaults to `https://<okdp-control-plane-ui.ingress.host>`. |
 | oidcClient.refreshTokenLifespan | string | `"1h0m0s"` |  |

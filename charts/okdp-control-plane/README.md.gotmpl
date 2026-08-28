@@ -20,27 +20,28 @@ On top of the sub-charts it renders:
   `okdp-control-plane-ui.backend.service`)
   in front of the API server pods, so the console `/api` routing does not depend
   on the Helm release name;
-- optionally, for platforms running kubauth, the `OidcClient` of the console
-  (`oidcClient.enabled`, off by default), registering the console public URL as
-  an allowed redirect URI;
+- optionally, the console's OIDC client created as a Kubernetes resource
+  (`oidcClient.enabled`, off by default), for providers that register clients so;
 - a `helm test` pod checking the health endpoints of both components.
 
 ## Prerequisites
 
-To install the chart: a Kubernetes cluster, Helm >= 3.8, and the issuer URL of an
-OIDC provider in `okdp-control-plane-ui.oidc.authority`. The chart assumes no
-particular provider and creates no client there; with kubauth,
-`oidcClient.enabled=true` declares it, which needs the kubauth CRD.
+To install the chart: a Kubernetes cluster, Helm >= 3.8, and an OIDC provider
+(Keycloak, Dex, or any OpenID Connect one). Set its issuer URL in
+`okdp-control-plane-ui.oidc.authority` and register a client there; the chart
+assumes no provider and creates none. For providers that register clients as
+Kubernetes resources, `oidcClient.enabled=true` creates it for you (needs its CRD).
 
 For the control plane to work once installed:
 
 - [KuboCD](https://github.com/kubotal/kubocd) and a `Context` holding the service
   catalog, which the server reads and writes `Release` resources against;
-- an OIDC provider carrying the client `okdp-control-plane-ui.oidc.clientId`, with
+- the OIDC provider carrying the client `okdp-control-plane-ui.oidc.clientId`, with
   `https://<host>`, `https://<host>/` and `https://<host>/silent-refresh.html` as
-  redirect URIs, and allowing the console origin. Only kubauth has been validated
-  so far; the console's Identity pages rely on its CRDs and stay unavailable with
-  another provider;
+  redirect URIs, and allowing the console origin. Sign-in is standard OpenID
+  Connect, so the login, the catalog and the services work the same on any
+  provider; only the console's Identity pages (users and groups) stay
+  provider-dependent, needing a provider that exposes user and group management;
 - an ingress controller (`nginx` by default) and cert-manager with the
   ClusterIssuer named in `okdp-control-plane-ui.ingress.clusterIssuer`;
 - metrics-server (optional, resource usage panels).
