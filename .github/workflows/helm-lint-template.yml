@@ -82,7 +82,7 @@ jobs:
         if: steps.list-changed.outputs.changed == 'true'
         run: |
           mapfile -t yaml_files < <(
-            find charts -mindepth 2 -maxdepth 2 \( -name Chart.yaml -o -name values.yaml \) -print | sort
+            find charts -mindepth 2 -maxdepth 2 \( -name Chart.yaml -o -name 'values*.yaml' \) -print | sort
           )
 
           if [ "${#yaml_files[@]}" -eq 0 ]; then

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "okdp-control-plane values",
+  "type": "object",
+  "properties": {
+    "okdp-control-plane-ui": {
+      "type": "object",
+      "properties": {
+        "oidc": {
+          "type": "object",
+          "properties": {
+            "authority": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Issuer URL of the OIDC provider, e.g. https://oidc.example.com. The chart assumes no particular provider, so it has no default. Required as long as the pinned console version reads its issuer from the chart; a console offering oidc.source=context takes it from the platform Context instead, and this constraint can then be relaxed."
+            }
+          }
+        }
+      }
+    }
+  }
+}

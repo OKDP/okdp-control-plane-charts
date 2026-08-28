@@ -7,6 +7,9 @@
 # passed verbatim to the corresponding sub-chart. Only the most common settings
 # are listed here; any value supported by the sub-charts can be set under these
 # keys.
+#
+# The defaults target no particular platform. `values-dev-sandbox.yaml` holds
+# the values for the OKDP dev sandbox.
 
 # -- Values passed to the okdp-control-plane-server sub-chart.
 okdp-control-plane-server:
@@ -19,21 +22,15 @@ okdp-control-plane-server:
     pullPolicy: IfNotPresent
   # Rendered as environment variables of the server.
   configuration:
-    # -- Namespace hosting the platform components (kubauth, OIDC clients).
+    # -- Namespace hosting the platform components.
     platformNamespace: okdp-system
     # -- Namespace of the KuboCD controller.
     kubocdNamespace: kubocd-system
-    # -- KuboCD Context holding the service catalog. The dev-sandbox uses
-    # `default` in `kubocd-system` (the sub-chart default is `platform` in the
-    # release namespace).
-    contextName: default
-    contextNamespace: kubocd-system
-    # -- Single origin allowed by CORS. Kept for direct API access; the console
-    # itself is same-origin (the ingress routes /api to the server).
-    allowedOrigins: https://console.okdp.dev-sandbox
+    # -- Single origin allowed by CORS on the API. The console itself is
+    # same-origin, so this only matters for callers on another origin; set it to
+    # `https://<okdp-control-plane-ui.ingress.host>` when it does.
+    allowedOrigins: https://okdp-ui.example.com
     logLevel: info
-    releaseInterval: 30m
-    releaseTimeout: 10m
   service:
     type: ClusterIP
     port: 8093
@@ -51,25 +48,20 @@ okdp-control-plane-ui:
   # In-cluster okdp-server Service the console ingress routes /api to.
   backend:
     # -- Name of the Service the console ingress routes /api to. The umbrella
-    # chart renders a Service with this name in front of the API server pods,
-    # so it does not depend on the release name.
+    # chart renders a Service with this name in front of the API server pods, so
+    # it does not depend on the release name.
     service: okdp-server
     # -- Port of that Service.
     port: 8093
   # OIDC provider of the console, injected at container startup (config.js).
   oidc:
-    # -- OIDC issuer the console authenticates against. Required by the
-    # sub-chart.
-    authority: https://kubauth.okdp.dev-sandbox
-    # -- OIDC client id. Must match `oidcClient.name` below.
+    # -- Issuer URL of the OIDC provider the console authenticates against.
+    # Required: the sub-chart fails the render when it is empty. The chart does
+    # not assume any particular provider.
+    authority: ""
+    # -- Client id the console uses. The client must exist in the provider,
+    # with the console URL as an allowed redirect URI.
     clientId: okdp-ui
-  identity:
-    # -- ID-token claim carrying the caller's roles.
-    rolesClaim: groups
-    # -- Role (in the claim above) that opens the administration pages. The
-    # dev-sandbox admin user carries the `admins` group (the sub-chart default
-    # is `platform_admin`).
-    adminRole: admins
   service:
     type: ClusterIP
     port: 4200
@@ -77,24 +69,24 @@ okdp-control-plane-ui:
   ingress:
     className: nginx
     # -- Public host of the console.
-    host: console.okdp.dev-sandbox
+    host: okdp-ui.example.com
     # -- cert-manager ClusterIssuer used for the TLS certificate.
     clusterIssuer: default-issuer
     tlsSecretName: okdp-ui-tls
   resources: {}
 
-# Kubauth OIDC client for the console. The console authenticates with the
-# platform OIDC provider (kubauth) using `okdp-control-plane-ui.oidc.clientId`;
-# this resource registers that client with the console public URL as an allowed
-# redirect URI. Requires the kubauth CRDs (oidcclients.kubauth.kubotal.io) on
-# the cluster.
+# Optional registration of the console as an OIDC client, for platforms whose
+# provider is kubauth: it renders an `OidcClient` resource with the console URL
+# as an allowed redirect URI. Off by default, since it needs the kubauth CRD on
+# the cluster and the chart does not assume any provider. With any other
+# provider, register the client there and leave this disabled.
 oidcClient:
-  # -- Create the kubauth OidcClient for the console.
-  enabled: true
-  # -- Name of the OidcClient resource. Kubauth uses it as client_id, which
-  # must match `okdp-control-plane-ui.oidc.clientId`.
+  # -- Render the kubauth OidcClient for the console.
+  enabled: false
+  # -- Name of the OidcClient resource. kubauth uses it as client_id, so it must
+  # match `okdp-control-plane-ui.oidc.clientId`.
   name: okdp-ui
-  # -- Namespace of the OidcClient (kubauth clients namespace). Defaults to
+  # -- Namespace of the OidcClient. Defaults to
   # okdp-control-plane-server.configuration.platformNamespace.
   namespace: ""
   # -- Public URL of the console. Defaults to
@@ -102,8 +94,8 @@ oidcClient:
   publicUrl: ""
   displayName: OKDP Console
   description: OIDC client for the OKDP web console
-  # -- Additional allowed redirect URIs (e.g. http://localhost:4200 for local
-  # development of the console against this cluster).
+  # -- Additional allowed redirect URIs (e.g. http://localhost:4200 to develop
+  # the console against this cluster).
   extraRedirectURIs: []
   accessTokenLifespan: 1h0m0s
   idTokenLifespan: 1h0m0s

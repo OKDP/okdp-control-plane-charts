@@ -1,0 +1,40 @@
+# Values for the OKDP dev sandbox (okdp-control-plane-dev-sandbox), where the
+# OIDC provider is kubauth and the ingress suffix is okdp.dev-sandbox:
+#
+#   helm dependency update charts/okdp-control-plane
+#   helm install okdp-control-plane charts/okdp-control-plane -n okdp-system \
+#     --create-namespace -f charts/okdp-control-plane/values-dev-sandbox.yaml
+#
+# The browser loads the OIDC configuration from kubauth, whose ingress only
+# allows http://localhost:4200 out of the box, so the console origin has to be
+# added before sign-in works:
+#
+#   kubectl patch release kubauth -n okdp-system --type merge \
+#     -p '{"spec":{"parameters":{"oidc":{"ingress":{"annotations":{"nginx.ingress.kubernetes.io/cors-allow-origin":"http://localhost:4200, https://console.okdp.dev-sandbox"}}}}}}'
+
+okdp-control-plane-server:
+  configuration:
+    # The sandbox catalog lives in the `default` Context of kubocd-system.
+    contextName: default
+    contextNamespace: kubocd-system
+    allowedOrigins: https://console.okdp.dev-sandbox
+
+okdp-control-plane-ui:
+  oidc:
+    authority: https://kubauth.okdp.dev-sandbox
+  identity:
+    # The sandbox admin user carries the `admins` group.
+    adminRole: admins
+  ingress:
+    host: console.okdp.dev-sandbox
+
+oidcClient:
+  # kubauth is the sandbox provider, so the console client can be declared here.
+  enabled: true
+  # Local origins, so `npm start` can authenticate against this cluster. They
+  # are specific to a local sandbox: drop them before reusing this file
+  # anywhere else.
+  extraRedirectURIs:
+    - http://localhost:4200
+    - http://localhost:4200/
+    - http://localhost:4200/silent-refresh.html

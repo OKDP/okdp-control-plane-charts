@@ -15,12 +15,18 @@ API server (in-cluster):
   kubectl port-forward -n {{ .Release.Namespace }} svc/{{ $ui.backend.service }} {{ $ui.backend.port }}:{{ $ui.backend.port }}
   curl -s http://localhost:{{ $ui.backend.port }}/health
 {{- end }}
+{{- if $ui.enabled }}
+
+Sign-in needs the client "{{ $ui.oidc.clientId }}" to exist in {{ $ui.oidc.authority }},
+with these redirect URIs:
+  {{ include "okdp-control-plane.consoleUrl" . }}
+  {{ include "okdp-control-plane.consoleUrl" . }}/
+  {{ include "okdp-control-plane.consoleUrl" . }}/silent-refresh.html
+{{- end }}
 {{- if .Values.oidcClient.enabled }}
-
-OIDC client "{{ .Values.oidcClient.name }}" registered in namespace "{{ include "okdp-control-plane.oidcClientNamespace" . }}" for {{ include "okdp-control-plane.consoleUrl" . }}.
+Declared by this release as a kubauth OidcClient "{{ .Values.oidcClient.name }}" in namespace "{{ include "okdp-control-plane.oidcClientNamespace" . }}".
 {{- else }}
-
-oidcClient.enabled=false: make sure an OidcClient "{{ .Values.oidcClient.name }}" allowing {{ include "okdp-control-plane.consoleUrl" . }} exists, otherwise the console login fails.
+Register it in your provider: the chart does not create it (oidcClient.enabled=false).
 {{- end }}
 
 Check the pods:
