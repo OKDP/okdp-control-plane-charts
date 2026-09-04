@@ -47,7 +47,7 @@ together.
 <!-- x-release-please-start-version -->
 | Chart | Version | Control plane (`appVersion`) | Sub-charts |
 |---|---|---|---|
-| [`okdp-control-plane`](charts/okdp-control-plane) | `0.2.0` | `0.7.x` | `okdp-control-plane-server` 0.7.1, `okdp-control-plane-ui` 0.7.0 |
+| [`okdp-control-plane`](charts/okdp-control-plane) | `0.3.0` | `0.7.x` | `okdp-control-plane-server` 0.7.1, `okdp-control-plane-ui` 0.7.0 |
 <!-- x-release-please-end -->
 
 Repository layout:
@@ -109,7 +109,7 @@ and the services behave the same on any provider. The one provider-dependent fea
 console's Identity pages (users and groups), which need a provider that exposes user and group
 management to the platform; with any other provider the section stays hidden.
 
-Known-good baseline: chart `0.2.0` <!-- x-release-please-version -->
+Known-good baseline: chart `0.3.0` <!-- x-release-please-version -->
 with `okdp-control-plane-server` `0.7.1` and `okdp-control-plane-ui` `0.7.0`, on a Kind cluster.
 This is the version set validated by the maintainers; the OKDP sandbox runs the same console
 against Keycloak.
@@ -132,7 +132,7 @@ of your OIDC provider:
 
 <!-- x-release-please-start-version -->
 ```sh
-helm install okdp-control-plane oci://quay.io/okdp/charts/okdp-control-plane --version 0.2.0 \
+helm install okdp-control-plane oci://quay.io/okdp/charts/okdp-control-plane --version 0.3.0 \
   -n okdp-system --create-namespace \
   --set okdp-control-plane-ui.ingress.host=console.example.com \
   --set okdp-control-plane-ui.oidc.authority=https://oidc.example.com
