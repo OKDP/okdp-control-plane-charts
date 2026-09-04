@@ -2,7 +2,7 @@ apiVersion: v2
 name: okdp-control-plane
 description: OKDP control plane - API server and web console deployed together
 type: application
-version: 0.2.0
+version: 0.3.0
 # Version of the control plane shipped by this chart (server 0.7.1 / ui 0.7.0).
 appVersion: "0.7.1"
 home: https://okdp.io
